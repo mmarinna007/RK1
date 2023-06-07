@@ -2,11 +2,14 @@
 #define ONLINE_TEST_H 
 
 #include <curses.h>
-// count correct = 
-/*typedef struct {
-    long correct;
+
+typedef struct {
+    int  total_sym;
+    int  correct_sym;
+    int  total_word;
+    char *text;
 } stat_t;
-*/
+
 #define CORRECT (1)
 #define INCORRECT (2)
 

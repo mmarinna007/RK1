@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include <string.h>
 #include <getopt.h>
-#include <time.h>
 #include "file.h"
 
 
@@ -20,6 +19,8 @@ typedef struct {
     int time_duration;
     int max_fail;
 } option_t;
+
+
 
 void vkl_timer(int duration)
 {
@@ -112,9 +113,27 @@ int main(int argc, char **argv)
 
     // Запуск
     pthread_t navigation_thread;
-    pthread_create(&navigation_thread, NULL, &navigation, text);
-    vkl_timer(opt.time_duration);
+
+    stat_t st;
+    st.text = text;
     
+    pthread_create(&navigation_thread, NULL, &navigation, &st);
+    clock_t start_time = clock();
+    vkl_timer(opt.time_duration);
+    clock_t end_time   = clock();
+    wclear(stdscr);
+    
+
+    double dur = (end_time - start_time) * 1.0 / CLOCKS_PER_SEC;
+    
+    double avg_sym  = st.total_sym / dur;
+    double avg_word = st.total_word / dur;
+
+    char stat_str[1029] = {0};
+    sprintf(stat_str, "STAT\nCorrect sym: %i\nIncorrect sym: %i\nTotal sym: %i\nSPS: %.2lf\nWPS: %.2lf\n",
+            st.correct_sym, st.total_sym - st.correct_sym, st.total_sym, avg_sym, avg_word);
+    addstr(stat_str);
+
     refresh();
     getch();
     endwin();

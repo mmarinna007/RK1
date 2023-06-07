@@ -44,15 +44,23 @@ char* get_content(char const *inp_flnm)
 void
 navigation(void *args)
 {
-    char const *text = args;
+    stat_t *st = args;
+    char const *text = st->text;
     int x = 0, y = 0;
-    size_t correct = 0;
+    st->correct_sym = 0;
+    st->total_sym = 0;
+    st->total_word = 0;
+
     while (!completion) {
         char sym = getch();
-        
+        st->total_sym++;
+
         int status; //= (sym == text[x + y]) ? CORRECT : INCORRECT;
+        if (text[x + y] == ' ') {
+            st->total_word++;
+        }
         if (sym == text[x + y]) {
-            correct++;
+            st->correct_sym++;
             status = CORRECT;
         } else {
             status = INCORRECT;
@@ -69,6 +77,6 @@ navigation(void *args)
             break;
         }
     }
-    completion = 1;
+    completion   = 1;
 }
 
