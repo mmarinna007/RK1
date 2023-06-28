@@ -5,8 +5,8 @@
 #include <getopt.h>
 #include "file.h"
 
-
 extern _Bool completion;
+
 typedef struct {
     char *filename;
 
@@ -21,16 +21,23 @@ typedef struct {
 } option_t;
 
 
-
-void vkl_timer(int duration)
+/*
+ *  Обратный отсчёт.
+ */
+double vkl_timer(int duration)
 {
-    clock_t start = clock();
+    // 
+    clock_t start = clock(); 
     while (!completion && 
             duration > (int)((clock() - start) / CLOCKS_PER_SEC)) {
         continue;
     }
-    completion = 1;
+    completion = 1; // значение влияет на функцию navigation (Время истекло)
+    return (clock() - start) * 1.0 / CLOCKS_PER_SEC;
 }
+/*
+ * Парсинг опций программы.
+ */
 int parse_args(int argc, char **argv, option_t *opt)
 {
     if (argc == 1 || strcmp(argv[1], "--help") == 0)
@@ -45,7 +52,6 @@ int parse_args(int argc, char **argv, option_t *opt)
         return 1;
     }
     int r;
-    char *filename;
     while ((r = getopt(argc, argv, "f:t:i:l:")) != -1) {
         switch (r) {
             case 'i':
@@ -64,13 +70,12 @@ int parse_args(int argc, char **argv, option_t *opt)
                 opt->max_fail = atoi(optarg);
                 break;
 
-            default:
-                // МСДЖ: неизвестный аргумент %с [r]
+            default: // неверная опция (getopt сообщит какой)
                 return 1;
         }
     }
-    if (opt->time_duration <= 0 
-        || opt->level < EASY || opt->level > HARD
+    // проверка корректность значений
+    if (opt->time_duration <= 0  || opt->level < EASY || opt->level > HARD
         || opt->max_fail < 0)
     {
         return 1;
@@ -91,48 +96,49 @@ int main(int argc, char **argv)
     }
     char *text = get_content(opt.filename);
     if (text == NULL) {
-        // МСДЖ: Не удалось прочитать исходный текст
         exit(EXIT_FAILURE);
     }
 
+    // Настройка режима работы.
     initscr();   
     noecho();
     cbreak();
-    if ((LINES < 24) || (COLS < 80)) {
+    if ((LINES < 24) || (COLS < 80)) { 
         endwin();
         free(text);
-        fprintf(stderr, "Your terminal needs to be at least 80x24");
+        fprintf(stderr, "Your terminal needs to be at least 80x24\n");
         return 2;
     }
-    addstr(text);
+
+    addstr(text); // Печать прочитанного текста
     
-    move(0, 0); // встать в начало консоли
-    start_color();
+    move(0, 0); // Перенос указателя в начало 
+    start_color(); // найстрока палитры
     init_pair(CORRECT, COLOR_WHITE, COLOR_GREEN);
     init_pair(INCORRECT, COLOR_WHITE, COLOR_RED);
 
-    // Запуск
+    // Поток для таймера
     pthread_t navigation_thread;
 
+    // Сбор статистики
     stat_t st;
     st.text = text;
     
-    pthread_create(&navigation_thread, NULL, &navigation, &st);
-    clock_t start_time = clock();
-    vkl_timer(opt.time_duration);
-    clock_t end_time   = clock();
-    wclear(stdscr);
-    
+    pthread_create(&navigation_thread, NULL, &navigation, &st); // запустили навигацию
+    double dur = vkl_timer(opt.time_duration); // таймер
 
-    double dur = (end_time - start_time) * 1.0 / CLOCKS_PER_SEC;
     
+    // Подсчёт статистики
     double avg_sym  = st.total_sym / dur;
     double avg_word = st.total_word / dur;
 
+    // Строка-статистики
     char stat_str[1029] = {0};
     sprintf(stat_str, "STAT\nCorrect sym: %i\nIncorrect sym: %i\nTotal sym: %i\nSPS: %.2lf\nWPS: %.2lf\n",
             st.correct_sym, st.total_sym - st.correct_sym, st.total_sym, avg_sym, avg_word);
-    addstr(stat_str);
+
+    wclear(stdscr); // чистка консоли
+    addstr(stat_str); // Вывод
 
     refresh();
     getch();

@@ -4,79 +4,87 @@
 
 
 _Bool completion = 0; // завершенность программы
+                      
+/*
+ * Чтение текста из файла.
+ */
 char* get_content(char const *inp_flnm)
 {
     FILE *file;
-    file = fopen(inp_flnm, "rt");
+    file = fopen(inp_flnm, "rt"); // открытие
     if (file == NULL) {
-        // МСДЖ: Не найден файл с таким именем
+        fprintf(stderr, "Not found file %s\n", inp_flnm);
         return NULL;
     }
 
     long file_size;
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
+    fseek(file, 0, SEEK_END); // переместить указатель файла в конец
+    file_size = ftell(file); // размер файла
     if (file_size == -1) {
-        // МСДЖ: Не удалось узнать размер файла
+        fprintf(stderr, "Could not find file size\n");
         fclose(file);
         return NULL;
     }
 
-    char *text;
-    text = malloc(sizeof(char) * (file_size + 1));
-    if (text == NULL){ 
-        // МСДЖ: не удалось выделить %d память на куче [file_size]
+    char *text = malloc(sizeof(char) * (file_size + 1));
+    if (text == NULL) { 
+        fprintf(stderr, "Memory allocation failure\n");
         fclose(file);
         return NULL;
     }
     
+    // Перенос файлого-указателя в начало файла для чтения текста.
     fseek(file, 0, SEEK_SET);
-    // ToDo: Улучшить способ взятие содержимого текста
-    long i;
-    for (i = 0; i < file_size; i++) {
-        text[i] = fgetc(file);
+    if (fread(text, sizeof(char), file_size, file) != file_size) {
+        fprintf(stderr, "Unable to read content of %s\n", inp_flnm);
+        free(text);
+        fclose(file);
+        return NULL;
     }
-    text[i] = '\0';
+    text[file_size] = '\0';
     fclose(file);
     return text;
 }
-//stat_t
+/*
+ * Отслеживание нажатых клавиш.
+ */
 void
 navigation(void *args)
 {
-    stat_t *st = args;
+    stat_t *st = args; // Статистика нажатий
     char const *text = st->text;
     int x = 0, y = 0;
-    st->correct_sym = 0;
-    st->total_sym = 0;
-    st->total_word = 0;
+    
+    st->correct_sym = 0; 
+    st->total_sym = 0;   
+    st->total_word = 0;   
 
     while (!completion) {
         char sym = getch();
         st->total_sym++;
 
-        int status; //= (sym == text[x + y]) ? CORRECT : INCORRECT;
-        if (text[x + y] == ' ') {
+        int status; // определение цветовой палитры
+        if (text[x + y] == ' ') { // В слове слова закончились.
             st->total_word++;
         }
-        if (sym == text[x + y]) {
+        if (sym == text[x + y]) { // Правильно введённых символ
             st->correct_sym++;
             status = CORRECT;
         } else {
-            status = INCORRECT;
+            status = INCORRECT; 
         }
         
-        attron(COLOR_PAIR(status));
-        mvaddch(x, y, text[x + y]);
-        attroff(COLOR_PAIR(status));
+        attron(COLOR_PAIR(status)); // определили цвет печатающего символа
+        mvaddch(x, y, text[x + y]); // напечатали введённый символ
+        attroff(COLOR_PAIR(status)); // отключили
 
-        y += 1;
-        x += y / COLS;
+        y += 1; // переход на следующий символ на экране
+        x += y / COLS; // перенос на следущую строку
         y %= COLS;
-        if (text[x + y] == '\0') {
+        if (text[x + y] == '\0') { // Текст закончился
             break;
         }
     }
-    completion   = 1;
+    completion   = 1; // отключаем таймер
 }
 
