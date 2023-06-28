@@ -45,7 +45,7 @@ int parse_args(int argc, char **argv, option_t *opt)
         printf("TEST TYPING\n"
                 "-i <filename> (входной файл)\n"
                 "-t [0 - +inf] (таймер)\n"
-                "-i [0 - 2]    (уровень сложности)\n"
+                "-l [0 - 2]    (уровень сложности)\n"
                 "-f [0 - +inf] (макс. кол-во ошибок)\n"
                 );
             
@@ -86,7 +86,6 @@ int parse_args(int argc, char **argv, option_t *opt)
 int main(int argc, char **argv)
 {
     option_t opt;
-    opt.filename = "input.txt";
     opt.level = EASY;
     opt.time_duration = 30;
     opt.max_fail = 100;
@@ -94,6 +93,8 @@ int main(int argc, char **argv)
     if (parse_args(argc, argv, &opt) == 1) {
         return 0;
     }
+    char *filenames[] = {"easy.txt", "medium.txt", "hard.txt"};
+    opt.filename = filenames[opt.level];
     char *text = get_content(opt.filename);
     if (text == NULL) {
         exit(EXIT_FAILURE);
